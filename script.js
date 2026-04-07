@@ -1,9 +1,8 @@
-// Add an event listener to the form that runs when the form is submitted
-document.getElementById('routineForm').addEventListener('submit', async (e) => {
-  // Prevent the form from refreshing the page
-  e.preventDefault();
-  
-  // Get values from all form inputs
+const routineForm = document.getElementById('routineForm');
+const STORAGE_KEY = 'routinePreferences';
+
+// Read current form values so we can save or send them
+function getRoutinePreferences() {
   const timeOfDay = document.getElementById('timeOfDay').value;
   const focusArea = document.getElementById('focusArea').value;
   const timeAvailable = document.getElementById('timeAvailable').value;
@@ -11,6 +10,75 @@ document.getElementById('routineForm').addEventListener('submit', async (e) => {
   const selectedActivities = Array.from(
     document.querySelectorAll('input[name="activities"]:checked')
   ).map((activity) => activity.value);
+
+  return {
+    timeOfDay,
+    focusArea,
+    timeAvailable,
+    energyLevel,
+    selectedActivities
+  };
+}
+
+// Save preferences in localStorage so they persist between visits
+function saveRoutinePreferences() {
+  const preferences = getRoutinePreferences();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+}
+
+// Restore saved preferences when the page loads
+function loadRoutinePreferences() {
+  const savedPreferencesText = localStorage.getItem(STORAGE_KEY);
+  if (!savedPreferencesText) {
+    return;
+  }
+
+  try {
+    const savedPreferences = JSON.parse(savedPreferencesText);
+
+    if (savedPreferences.timeOfDay) {
+      document.getElementById('timeOfDay').value = savedPreferences.timeOfDay;
+    }
+    if (savedPreferences.focusArea) {
+      document.getElementById('focusArea').value = savedPreferences.focusArea;
+    }
+    if (savedPreferences.timeAvailable) {
+      document.getElementById('timeAvailable').value = savedPreferences.timeAvailable;
+    }
+    if (savedPreferences.energyLevel) {
+      document.getElementById('energyLevel').value = savedPreferences.energyLevel;
+    }
+
+    // Re-check activity boxes that were selected previously
+    const savedActivities = savedPreferences.selectedActivities || [];
+    document.querySelectorAll('input[name="activities"]').forEach((checkbox) => {
+      checkbox.checked = savedActivities.includes(checkbox.value);
+    });
+  } catch (error) {
+    console.error('Could not load saved preferences:', error);
+  }
+}
+
+// Load saved values once, then keep saving whenever a user changes any input
+loadRoutinePreferences();
+routineForm.addEventListener('change', saveRoutinePreferences);
+
+// Add an event listener to the form that runs when the form is submitted
+routineForm.addEventListener('submit', async (e) => {
+  // Prevent the form from refreshing the page
+  e.preventDefault();
+  
+  // Get values from all form inputs
+  const {
+    timeOfDay,
+    focusArea,
+    timeAvailable,
+    energyLevel,
+    selectedActivities
+  } = getRoutinePreferences();
+
+  // Save again on submit so newest choices are always persisted
+  saveRoutinePreferences();
 
   // Add a fallback so the prompt still works if no activities are selected
   const preferredActivities = selectedActivities.length > 0
